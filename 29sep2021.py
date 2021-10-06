@@ -75,6 +75,8 @@ plt.figure(0, figsize=(20, 10))
 
 plt.title('Simultaneous representation of ns3 data')
 
+# How to make loop here, so that I won't need to write this same code for 40 times?!
+
 plt.subplot(20,1,1)
 plt.plot(ns3_data['data'][0])
 plt.subplot(20,1,2)
