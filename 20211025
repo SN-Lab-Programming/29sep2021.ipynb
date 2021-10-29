@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[39]:
+# In[1]:
 
 
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ from scipy.fftpack import fft, fftshift, ifft
 from scipy.fftpack import fftfreq
 from scipy import signal
 import math
+import matplotlib
 import matplotlib.ticker as mtick
 
 
@@ -33,10 +34,10 @@ if brpylib_ver.split('.') < brpylib_ver_req.split('.'):
 
 ### getting data
 
-datafile_nsx_pre = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181217/datafile001.ns4"
-datafile_nev_pre = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181217/datafile001.nev"
-datafile_nsx_post = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181217/datafile002.ns4"
-datafile_nev_post = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181217/datafile002.nev"
+datafile_nsx_pre = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181130/datafile001.ns4"
+datafile_nev_pre = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181130/datafile001.nev"
+datafile_nsx_post = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181130/datafile002.ns4"
+datafile_nev_post = "/media/kenichirotsutsui/HDCZ-UT/data/71/20181130/datafile002.nev"
 
 nsx_file_pre = NsxFile(datafile_nsx_pre)
 nev_file_pre = NevFile(datafile_nev_pre)
@@ -133,11 +134,21 @@ psd_post = list(nsx_post['data'][8][(int)(0):(int)(3600*fs)])
 # In[9]:
 
 
+### trials for 20-mins' psd
+
+psd20_pre = np.hsplit(nsx_pre['data'][8][(int)(0):(int)(3600*fs)],3)
+
+psd20_post = np.hsplit(nsx_post['data'][8][(int)(0):(int)(7200*fs)],6)
+
+
+# In[10]:
+
+
 ### time scales
 
     ## mep:[-100ms,200ms]
 mep_t = np.arange(-100,200,1/fs*1000)
-
+mep_t2 = np.arange(-20,40,1/fs*1000)
     ## ecog:[-30s,30s], except the first trial
 
 ecog_t0 = []
@@ -147,7 +158,92 @@ ecog_t0.append(np.arange((30*fs-len(ecog_post[0]))/fs,30,1/fs))
 ecog_t = np.arange(-30,30,1/fs)
 
 
-# In[10]:
+# In[29]:
+
+
+noise_pre = [5,8,16,21,23,28,49,54,59]
+
+noise_post = [1,72]
+
+
+# In[30]:
+
+
+### averaging EMG
+
+ave_pre = np.zeros(shape=(len(emg_pre[0])))
+ave_post = np.zeros(shape=(len(emg_pre[0])))
+
+for i in range(len(emg_pre)):
+    if i in noise_pre:
+        continue
+    else :
+        ave_pre+=np.array(emg_pre[i])
+ave_pre/=len(emg_pre)-len(noise_pre)
+
+for i in range(len(emg_pre)):
+    if i in noise_post:
+        continue
+    else :
+        ave_post+=np.array(emg_post[i])
+ave_post/=len(emg_pre)-len(noise_post)
+
+
+# In[13]:
+
+
+len(emg_pre)-len(noise_post)
+
+
+# In[14]:
+
+
+### emg plotting in -100,200 ms
+
+im1 = plt.figure(figsize=(20,15))
+plt.title('Trial_pre_Average')
+plt.xlabel('Time / ms')
+plt.ylabel('Voltage / uV')
+plt.plot(mep_t,ave_pre)
+plt.ylim(-400,1400)
+#plt.xlim(-20,40)
+im1.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/MEP/AVEpre.png')
+
+im2 = plt.figure(figsize=(20,15))
+plt.title('Trial_post_Average')
+plt.xlabel('Time / ms')
+plt.ylabel('Voltage / uV')
+plt.plot(mep_t,ave_post)
+plt.ylim(-400,1400)
+#plt.xlim(-20,40)
+im2.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/MEP/AVEpost.png')
+
+
+# In[36]:
+
+
+### emg plotting in -20,40 ms
+
+im1 = plt.figure(figsize=(20,15))
+plt.title('Trial_pre_Average')
+plt.xlabel('Time / ms')
+plt.ylabel('Voltage / uV')
+plt.plot(mep_t,ave_pre)
+plt.ylim(0,100)
+plt.xlim(0,15)
+#im1.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/MEP/AVEpre_s.png')
+
+im2 = plt.figure(figsize=(20,15))
+plt.title('Trial_post_Average')
+plt.xlabel('Time / ms')
+plt.ylabel('Voltage / uV')
+plt.plot(mep_t,ave_post)
+plt.ylim(-30,100)
+plt.xlim(0,10)
+#im2.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/MEP/AVEpost_s.png')
+
+
+# In[26]:
 
 
 ### plotting ecog traces
@@ -170,14 +266,15 @@ for i in range(len(ecog_pre)):
         ## red mark for 3sd
     greater_than_threshold = [j for j, val in enumerate(red) if np.abs(val-ave[0][i])>3*sd[0][i]]
     plt.scatter(greater_than_threshold, red[greater_than_threshold], color='r',label='noise',s=10)
-    plt.xticks([0,len(red)-30*fs,len(red)],[(int)(30*fs-(len(red))/fs),'$0$','$30$'])
-
+    plt.xticks([0,len(red)-30*fs,len(red)],[(int)((30*fs-(len(red)))/fs),'$0$','$30$'])
+    #plt.ylim(-50,50)
+    
     plt.legend()
     
-ecog_fig.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/ECOG_pre.png')
+ecog_fig.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/ECOG_pre_2.png')
 
 
-# In[159]:
+# In[12]:
 
 
 ## post-rTMS
@@ -199,14 +296,14 @@ for i in range(len(ecog_post)):
         ## red mark for 3sd
     greater_than_threshold = [j for j, val in enumerate(red) if np.abs(val-ave[1][i])>3*sd[1][i]]
     plt.scatter(greater_than_threshold, red[greater_than_threshold], color='r',label='noise',s=10)
-    plt.xticks([0,len(red)-30*fs,len(red)],[(int)(30*fs-(len(red))/fs),'$0$','$30$'])
+    plt.xticks([0,len(red)-30*fs,len(red)],[(int)((30*fs-(len(red)))/fs),'$0$','$30$'])
 
     plt.legend()
     
-ecog_fig.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/ECOG_post.png')
+ecog_fig.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/ECOG_post_2.png')
 
 
-# In[10]:
+# In[11]:
 
 
 ### filters generation
@@ -234,7 +331,7 @@ def butterBandStopFilter(lowcut, highcut, samplerate, order):
     return b,a
 
 
-# In[11]:
+# In[12]:
 
 
 ### processing
@@ -268,14 +365,14 @@ for i in range(len(ecog_pre)):
     
 
 
-# In[12]:
+# In[15]:
 
 
 plt.semilogx(xxFreqs[0][0], xxFFT[0][0],basex=3)
 plt.xlim(3,3**(math.log(200,3)))
 
 
-# In[12]:
+# In[16]:
 
 
 ### 60-mins psd_pre
@@ -305,7 +402,7 @@ xxFFT_pre = np.abs(np.fft.rfft(xx)/iSampleCount)
 xxFreqs_pre = np.linspace(0, iSampleRate/2, int(iSampleCount/2)+1) 
 
 
-# In[13]:
+# In[17]:
 
 
 ### 60-mins psd_post
@@ -335,32 +432,65 @@ xxFFT_post = np.abs(np.fft.rfft(xx)/iSampleCount)
 xxFreqs_post = np.linspace(0, iSampleRate/2, int(iSampleCount/2)+1) 
 
 
-# In[16]:
+# In[47]:
+
+
+psd_per = []
+for i in range(len(xxFFT_pre)):
+    psd_per.append(((xxFFT_post[i])-(xxFFT_pre[i]))/(xxFFT_pre[i]))
+
+
+# In[17]:
 
 
 ### ecog PSD
 ecog_psd = plt.figure(figsize=(10,5))
-plt.semilogx(xxFreqs_pre, xxFFT_pre,basex=3,label='pre',c='b',alpha=0.5)
-plt.semilogx(xxFreqs_post, xxFFT_post,basex=3,label='post',c='r',alpha=0.5)
+plt.semilogx(xxFreqs_pre, xxFFT_pre,basex=10,label='pre',c='b',alpha=0.5)
+plt.semilogx(xxFreqs_post, xxFFT_post,basex=10,label='post',c='r',alpha=0.5)
+plt.vlines(10**(math.log(4,10)), 0, 0.5, colors = "black", linestyles = "dashed")
+plt.vlines(10**(math.log(8,10)), 0, 0.5, colors = "black", linestyles = "dashed")
+plt.vlines(10**(math.log(12,10)), 0, 0.5, colors = "black", linestyles = "dashed")
+plt.vlines(10**(math.log(32,10)), 0, 0.5, colors = "black", linestyles = "dashed")
+plt.vlines(10**(math.log(80,10)), 0, 0.5, colors = "black", linestyles = "dashed")
+plt.vlines(10**(math.log(200,10)), 0, 0.5, colors = "black", linestyles = "dashed")
+plt.xlim(3,10**(math.log(500,10)))
+plt.ylim(0,0.3)
+plt.legend()
+
+ecog_psd.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/PSD_2.png')
+
+
+# In[51]:
+
+
+max(psd_per)
+
+
+# In[49]:
+
+
+### ecog PSD-percentage
+ecog_psd_p = plt.figure(figsize=(10,5))
+#plt.semilogx(xxFreqs_pre, psd_per,basex=3,alpha=0.5)
+plt.plot(psd_per)
+'''
 plt.vlines(3**(math.log(4,3)), 0, 0.5, colors = "black", linestyles = "dashed")
 plt.vlines(3**(math.log(8,3)), 0, 0.5, colors = "black", linestyles = "dashed")
 plt.vlines(3**(math.log(12,3)), 0, 0.5, colors = "black", linestyles = "dashed")
 plt.vlines(3**(math.log(32,3)), 0, 0.5, colors = "black", linestyles = "dashed")
 plt.vlines(3**(math.log(80,3)), 0, 0.5, colors = "black", linestyles = "dashed")
 plt.vlines(3**(math.log(200,3)), 0, 0.5, colors = "black", linestyles = "dashed")
-plt.xlim(3,3**(math.log(500,3)))
-plt.legend()
 
-ecog_psd.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/PSD.png')
+'''
 
-
-# In[17]:
+#plt.xlim(3,3**(math.log(500,3)))
+#plt.ylim(-1,1)
 
 
+#ecog_psd_p.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/PSD_2_P.png')
 
 
-
-# In[29]:
+# In[18]:
 
 
 ### power band
@@ -382,24 +512,24 @@ band_hgamma_pre = [i for i, val in enumerate(xxFreqs_pre) if val >=80 and val<=2
 band_hgamma_post = [i for i, val in enumerate(xxFreqs_post) if val >=80 and val<=200]
 
 
-# In[30]:
+# In[19]:
 
 
 ### change level
 
 per = []
-per.append((np.mean(xxFFT_pre[band_theta_pre])-np.mean(xxFFT_post[band_theta_post]))/np.mean(xxFFT_post[band_theta_post]))
+per.append((np.mean(xxFFT_post[band_theta_post])-np.mean(xxFFT_pre[band_theta_pre]))/np.mean(xxFFT_post[band_theta_pre]))
 
-per.append((np.mean(xxFFT_pre[band_alpha_pre])-np.mean(xxFFT_post[band_alpha_post]))/np.mean(xxFFT_post[band_alpha_post]))
+per.append((np.mean(xxFFT_post[band_alpha_post])-np.mean(xxFFT_pre[band_alpha_pre]))/np.mean(xxFFT_post[band_alpha_pre]))
 
-per.append((np.mean(xxFFT_pre[band_beta_pre])-np.mean(xxFFT_post[band_beta_post]))/np.mean(xxFFT_post[band_beta_post]))
+per.append((np.mean(xxFFT_post[band_beta_post])-np.mean(xxFFT_pre[band_beta_pre]))/np.mean(xxFFT_post[band_beta_pre]))
 
-per.append((np.mean(xxFFT_pre[band_lgamma_pre])-np.mean(xxFFT_post[band_lgamma_post]))/np.mean(xxFFT_post[band_lgamma_post]))
+per.append((np.mean(xxFFT_post[band_lgamma_post])-np.mean(xxFFT_pre[band_lgamma_pre]))/np.mean(xxFFT_post[band_lgamma_pre]))
 
-per.append((np.mean(xxFFT_pre[band_hgamma_pre])-np.mean(xxFFT_post[band_hgamma_post]))/np.mean(xxFFT_post[band_hgamma_post]))
+per.append((np.mean(xxFFT_post[band_hgamma_post])-np.mean(xxFFT_pre[band_hgamma_pre]))/np.mean(xxFFT_post[band_hgamma_pre]))
 
 
-# In[54]:
+# In[22]:
 
 
 ### change level plotting
@@ -410,7 +540,204 @@ ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1,decimals=1))
 
 plt.xlabel("Power Band")
 plt.ylabel("Change from basal level / %")
-fig.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/powerband.png')
+fig.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/powerband_2.png')
+
+
+# In[12]:
+
+
+### 20-mins windowed PSD
+
+## pre
+
+xxFFT20_pre = []
+xxFreqs20_pre = []
+
+for i in range(len(psd20_pre)):
+
+    x = list(psd20_pre[i])
+    iSampleRate = fs  
+    iSampleCount = len(x)  
+    
+    ## filtering
+    b,a = butterBandPassFilter(3,200,iSampleRate,order=4)
+    xx = signal.lfilter(b,a,x)
+
+    b,a = butterBandStopFilter(48,52,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+
+    b,a = butterBandStopFilter(98,102,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+
+    b,a = butterBandStopFilter(148,152,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+
+    b,a = butterBandStopFilter(198,202,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+    
+    ## FFT
+    xxFFT20_pre.append( np.abs(np.fft.rfft(xx)/iSampleCount) ) 
+    xxFreqs20_pre.append( np.linspace(0, iSampleRate/2, int(iSampleCount/2)+1) )
+
+
+
+
+
+# In[13]:
+
+
+## post
+
+xxFFT20_post = []
+xxFreqs20_post = []
+
+for i in range(len(psd20_post)):
+
+    x = list(psd20_post[i])
+    iSampleRate = fs  
+    iSampleCount = len(x)  
+    
+    ## filtering
+    b,a = butterBandPassFilter(3,200,iSampleRate,order=4)
+    xx = signal.lfilter(b,a,x)
+
+    b,a = butterBandStopFilter(48,52,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+
+    b,a = butterBandStopFilter(98,102,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+
+    b,a = butterBandStopFilter(148,152,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+
+    b,a = butterBandStopFilter(198,202,iSampleRate,order=2)
+    xx = signal.lfilter(b,a,xx)
+    
+    ## FFT
+    xxFFT20_post.append( np.abs(np.fft.rfft(xx)/iSampleCount) ) 
+    xxFreqs20_post.append( np.linspace(0, iSampleRate/2, int(iSampleCount/2)+1) )
+
+
+
+
+
+# In[23]:
+
+
+
+
+a0 = []
+a1 = []
+b0 = []
+b1 = []
+th0 = []
+th1 = []
+ly0 = []
+ly1 = []
+hy0 = []
+hy1 = []
+ap = []
+bp = []
+thp = []
+lyp = []
+hyp = []
+
+
+for i in range(len(xxFFT20_pre)):
+    
+    th0.append((np.mean(xxFFT20_pre[i][band_theta_pre])))
+    
+    
+    a0.append((np.mean(xxFFT20_pre[i][band_alpha_pre])))
+    
+    
+    b0.append((np.mean(xxFFT20_pre[i][band_beta_pre])))
+    
+    
+    ly0.append((np.mean(xxFFT20_pre[i][band_lgamma_pre])))
+    
+    
+    hy0.append((np.mean(xxFFT20_pre[i][band_hgamma_pre])))
+    
+for i in range(len(xxFFT20_post)):
+    
+    th1.append((np.mean(xxFFT20_post[i][band_theta_post])))
+    
+    a1.append((np.mean(xxFFT20_post[i][band_alpha_post])))
+    
+    b1.append((np.mean(xxFFT20_post[i][band_beta_post])))
+    
+    ly1.append((np.mean(xxFFT20_post[i][band_lgamma_post])))
+
+    hy1.append((np.mean(xxFFT20_post[i][band_hgamma_post])))
+    
+for i in range(len(xxFFT20_post)):
+    
+    thp.append((np.mean(xxFFT20_post[i][band_theta_post]))-(np.mean(xxFFT20_pre[i][band_theta_pre]))/(np.mean(xxFFT20_pre[i][band_theta_pre])))
+    
+    ap.append((np.mean(xxFFT20_post[i][band_alpha_post]))-(np.mean(xxFFT20_pre[i][band_alpha_pre]))/(np.mean(xxFFT20_pre[i][band_alpha_pre])))
+    
+    bp.append((np.mean(xxFFT20_post[i][band_beta_post]))-(np.mean(xxFFT20_pre[i][band_beta_pre]))/(np.mean(xxFFT20_pre[i][band_beta_pre])))
+    
+    lyp.append((np.mean(xxFFT20_post[i][band_lgamma_post]))-(np.mean(xxFFT20_pre[i][band_lgamma_pre]))/(np.mean(xxFFT20_pre[i][band_lgamma_pre])))
+
+    hyp.append((np.mean(xxFFT20_post[i][band_hgamma_post]))-(np.mean(xxFFT20_pre[i][band_hgamma_pre]))/(np.mean(xxFFT20_pre[i][band_hgamma_pre])))
+
+
+# In[26]:
+
+
+### 20-mins windowed plotting
+
+psd20 = plt.figure(figsize=(20,5))
+
+plt.plot([-50,-30,-10],th0,marker='o',c='b',label='θ')
+plt.plot([-50,-30,-10],a0,marker='o',c='r',label='α')
+plt.plot([-50,-30,-10],b0,marker='o',c='g',label='β')
+plt.plot([-50,-30,-10],ly0,marker='o',c='y',label='low-γ')
+plt.plot([-50,-30,-10],hy0,marker='o',c='k',label='high-γ')
+
+plt.plot([10,30,50,70,90,110],th1,marker='o',c='b')
+plt.plot([10,30,50,70,90,110],a1,marker='o',c='r')
+plt.plot([10,30,50,70,90,110],b1,marker='o',c='g')
+plt.plot([10,30,50,70,90,110],ly1,marker='o',c='y')
+plt.plot([10,30,50,70,90,110],hy1,marker='o',c='k')
+
+plt.plot([-8,8],[0,0],linewidth=10.0,c='c',label='rTMS')
+
+plt.xlim(-60,120)
+plt.ylim(-0.01,0.08)
+plt.xlabel("Time / min")
+plt.ylabel("Power / dB")
+
+plt.legend()
+
+psd20.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/20min_2.png')
+
+
+# In[22]:
+
+
+### 20-mins windowed plotting percentage
+psd20 = plt.figure(figsize=(20,5))
+
+plt.plot([-50,-30,-10],(np.array(th1)-np.array(th0))/np.array(th0),marker='o',c='b',label='θ')
+plt.plot([-50,-30,-10],(a1-a0)/a0,marker='o',c='r',label='α')
+plt.plot([-50,-30,-10],(b1-b0)/b0,marker='o',c='g',label='β')
+plt.plot([-50,-30,-10],(ly1-ly0)/ly0,marker='o',c='y',label='low-γ')
+plt.plot([-50,-30,-10],(hy1-hy0)/hy0,marker='o',c='k',label='high-γ')
+
+
+plt.plot([-8,8],[0,0],linewidth=10.0,c='c',label='rTMS')
+
+plt.xlim(-60,120)
+plt.ylim(-0.01,0.08)
+plt.xlabel("Time / min")
+plt.ylabel("Power / dB")
+
+plt.legend()
+
+psd20.savefig('/home/kenichirotsutsui/Documents/Zhao/demo/ECOG/PSD/20min_2_P.png')
 
 
 # In[ ]:
